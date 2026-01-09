@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Swagger docs (large file)
+bamboo-swagger.json
+
+# Build output
+dist/
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp

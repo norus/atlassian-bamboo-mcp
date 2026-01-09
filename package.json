@@ -1,0 +1,52 @@
+{
+  "name": "bamboo-mcp-server",
+  "version": "1.0.8",
+  "description": "MCP server for Atlassian Bamboo",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "bamboo-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "bamboo",
+    "atlassian",
+    "ci-cd",
+    "model-context-protocol",
+    "claude",
+    "ai"
+  ],
+  "author": "norus",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/norus/atlassian-bamboo-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/norus/atlassian-bamboo-mcp/issues"
+  },
+  "homepage": "https://github.com/norus/atlassian-bamboo-mcp#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "undici": "^6.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
