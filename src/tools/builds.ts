@@ -227,7 +227,7 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
     'Get build result with actual log content. For plan builds, fetches logs from all jobs. For job builds, returns logs directly.',
     {
       build_key: z.string().describe('The build result key - can be plan level (e.g., "PROJ-PLAN-123") or job level (e.g., "PROJ-PLAN-JOB1-123")'),
-      max_log_lines: z.number().optional().describe('Maximum number of log lines per job (default: 100)'),
+      max_log_lines: z.number().optional().describe('Maximum number of log lines per job (default: 1000)'),
     },
     async ({ build_key, max_log_lines }) => {
       try {

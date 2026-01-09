@@ -142,7 +142,7 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
     {
       deployment_result_id: z.string().describe('The deployment result ID'),
       include_logs: z.boolean().optional().describe('Include log entries (default: false)'),
-      max_log_lines: z.number().optional().describe('Maximum number of log lines to return, most recent first (default: 100)'),
+      max_log_lines: z.number().optional().describe('Maximum number of log lines to return, most recent first (default: 1000)'),
     },
     async ({ deployment_result_id, include_logs, max_log_lines }) => {
       try {

@@ -350,7 +350,7 @@ export class BambooClient {
     maxLogLines?: number;
   }): Promise<unknown> {
     // First, try to get the result with logEntries (works for job-level keys)
-    const maxResult = params?.maxLogLines || 100;
+    const maxResult = params?.maxLogLines || 1000;
 
     const result = await this.request<{
       key: string;
@@ -506,9 +506,7 @@ export class BambooClient {
     const searchParams = new URLSearchParams();
     if (params?.includeLogs) {
       searchParams.set('includeLogs', 'true');
-      if (params?.maxLogLines) {
-        searchParams.set('max-result', String(params.maxLogLines));
-      }
+      searchParams.set('max-result', String(params?.maxLogLines || 1000));
     }
 
     const query = searchParams.toString();
