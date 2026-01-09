@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BambooClient } from '../bamboo-client.js';
+import { formatError, jsonResponse } from './utils.js';
 
 export function registerBuildTools(server: McpServer, client: BambooClient): void {
-  // Trigger build
   server.tool(
     'bamboo_trigger_build',
     'Trigger a build for a Bamboo plan',
@@ -22,29 +22,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
           customRevision: custom_revision,
           variables,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Stop build
   server.tool(
     'bamboo_stop_build',
     'Stop a running build for a Bamboo plan',
@@ -54,29 +38,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
     async ({ plan_key }) => {
       try {
         const result = await client.stopBuild(plan_key);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get build result
   server.tool(
     'bamboo_get_build_result',
     'Get the result of a specific build',
@@ -87,29 +55,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
     async ({ build_key, expand }) => {
       try {
         const result = await client.getBuildResult(build_key, expand);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get latest build result
   server.tool(
     'bamboo_get_latest_result',
     'Get the latest build result for a plan',
@@ -120,29 +72,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
     async ({ plan_key, expand }) => {
       try {
         const result = await client.getLatestBuildResult(plan_key, expand);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // List build results
   server.tool(
     'bamboo_list_build_results',
     'List build results with optional filters',
@@ -166,29 +102,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
           expand,
           includeAllStates: include_all_states,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(results);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get build logs
   server.tool(
     'bamboo_get_build_logs',
     'Get the build logs for a specific build. Returns log file URLs that can be accessed via browser.',
@@ -199,29 +119,13 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
     async ({ build_key, job_key }) => {
       try {
         const logs = await client.getBuildLogs(build_key, job_key);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(logs, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(logs);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get build result with log content
   server.tool(
     'bamboo_get_build_result_logs',
     'Get build result with actual log content. For plan builds, fetches logs from all jobs. For job builds, returns logs directly.',
@@ -234,24 +138,9 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
         const result = await client.getBuildResultWithLogs(build_key, {
           maxLogLines: max_log_lines,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );

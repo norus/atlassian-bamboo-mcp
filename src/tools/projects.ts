@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BambooClient } from '../bamboo-client.js';
+import { formatError, jsonResponse } from './utils.js';
 
 export function registerProjectTools(server: McpServer, client: BambooClient): void {
-  // List projects
   server.tool(
     'bamboo_list_projects',
     'List all Bamboo projects',
@@ -19,29 +19,13 @@ export function registerProjectTools(server: McpServer, client: BambooClient): v
           startIndex: start_index,
           maxResults: max_results,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(projects, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(projects);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get project
   server.tool(
     'bamboo_get_project',
     'Get details of a specific Bamboo project by key',
@@ -52,24 +36,9 @@ export function registerProjectTools(server: McpServer, client: BambooClient): v
     async ({ project_key, expand }) => {
       try {
         const project = await client.getProject(project_key, expand);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(project, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(project);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );

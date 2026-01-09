@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BambooClient } from '../bamboo-client.js';
+import { formatError, jsonResponse, textResponse } from './utils.js';
 
 export function registerPlanTools(server: McpServer, client: BambooClient): void {
-  // List plans
   server.tool(
     'bamboo_list_plans',
     'List all Bamboo build plans',
@@ -19,29 +19,13 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
           startIndex: start_index,
           maxResults: max_results,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(plans, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(plans);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get plan
   server.tool(
     'bamboo_get_plan',
     'Get details of a specific Bamboo build plan by key',
@@ -52,29 +36,13 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
     async ({ plan_key, expand }) => {
       try {
         const plan = await client.getPlan(plan_key, expand);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(plan, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(plan);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Search plans
   server.tool(
     'bamboo_search_plans',
     'Search for Bamboo build plans by name',
@@ -91,29 +59,13 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
           startIndex: start_index,
           maxResults: max_results,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(plans, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(plans);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Enable plan
   server.tool(
     'bamboo_enable_plan',
     'Enable a Bamboo build plan',
@@ -123,29 +75,13 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
     async ({ plan_key }) => {
       try {
         await client.enablePlan(plan_key);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Plan ${plan_key} has been enabled successfully.`,
-            },
-          ],
-        };
+        return textResponse(`Plan ${plan_key} has been enabled successfully.`);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Disable plan
   server.tool(
     'bamboo_disable_plan',
     'Disable a Bamboo build plan',
@@ -155,24 +91,9 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
     async ({ plan_key }) => {
       try {
         await client.disablePlan(plan_key);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Plan ${plan_key} has been disabled successfully.`,
-            },
-          ],
-        };
+        return textResponse(`Plan ${plan_key} has been disabled successfully.`);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );

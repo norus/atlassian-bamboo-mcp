@@ -1,6 +1,26 @@
 import { ProxyAgent, fetch as undiciFetch, type RequestInit } from 'undici';
 import type { BambooClientConfig } from './types.js';
 
+/**
+ * Build a URL query string from optional parameters
+ */
+function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      searchParams.set(key, String(value));
+    }
+  }
+  return searchParams.toString();
+}
+
+/**
+ * Append query string to endpoint if not empty
+ */
+function appendQuery(endpoint: string, query: string): string {
+  return query ? `${endpoint}?${query}` : endpoint;
+}
+
 export class BambooClient {
   private baseUrl: string;
   private token: string;
@@ -69,18 +89,17 @@ export class BambooClient {
     startIndex?: number;
     maxResults?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.expand) searchParams.set('expand', params.expand);
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-
-    const query = searchParams.toString();
-    return this.request(`/project${query ? `?${query}` : ''}`);
+    const query = buildQueryString({
+      'expand': params?.expand,
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+    });
+    return this.request(appendQuery('/project', query));
   }
 
   async getProject(projectKey: string, expand?: string): Promise<unknown> {
-    const query = expand ? `?expand=${expand}` : '';
-    return this.request(`/project/${projectKey}${query}`);
+    const query = buildQueryString({ expand });
+    return this.request(appendQuery(`/project/${projectKey}`, query));
   }
 
   // Plan endpoints
@@ -89,18 +108,17 @@ export class BambooClient {
     startIndex?: number;
     maxResults?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.expand) searchParams.set('expand', params.expand);
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-
-    const query = searchParams.toString();
-    return this.request(`/plan${query ? `?${query}` : ''}`);
+    const query = buildQueryString({
+      'expand': params?.expand,
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+    });
+    return this.request(appendQuery('/plan', query));
   }
 
   async getPlan(planKey: string, expand?: string): Promise<unknown> {
-    const query = expand ? `?expand=${expand}` : '';
-    return this.request(`/plan/${planKey}${query}`);
+    const query = buildQueryString({ expand });
+    return this.request(appendQuery(`/plan/${planKey}`, query));
   }
 
   async searchPlans(name: string, params?: {
@@ -108,13 +126,13 @@ export class BambooClient {
     startIndex?: number;
     maxResults?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    searchParams.set('searchTerm', name);
-    if (params?.fuzzy !== undefined) searchParams.set('fuzzy', String(params.fuzzy));
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-
-    return this.request(`/search/plans?${searchParams.toString()}`);
+    const query = buildQueryString({
+      'searchTerm': name,
+      'fuzzy': params?.fuzzy,
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+    });
+    return this.request(`/search/plans?${query}`);
   }
 
   async enablePlan(planKey: string): Promise<unknown> {
@@ -131,13 +149,12 @@ export class BambooClient {
     startIndex?: number;
     maxResults?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.enabledOnly !== undefined) searchParams.set('enabledOnly', String(params.enabledOnly));
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-
-    const query = searchParams.toString();
-    return this.request(`/plan/${planKey}/branch${query ? `?${query}` : ''}`);
+    const query = buildQueryString({
+      'enabledOnly': params?.enabledOnly,
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+    });
+    return this.request(appendQuery(`/plan/${planKey}/branch`, query));
   }
 
   async getPlanBranch(planKey: string, branchName: string): Promise<unknown> {
@@ -151,22 +168,21 @@ export class BambooClient {
     customRevision?: string;
     variables?: Record<string, string>;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.stage) searchParams.set('stage', params.stage);
-    if (params?.executeAllStages !== undefined) {
-      searchParams.set('executeAllStages', String(params.executeAllStages));
-    }
-    if (params?.customRevision) searchParams.set('customRevision', params.customRevision);
+    const queryParams: Record<string, string | boolean | undefined> = {
+      'stage': params?.stage,
+      'executeAllStages': params?.executeAllStages,
+      'customRevision': params?.customRevision,
+    };
 
-    // Add bamboo variables
+    // Add bamboo variables with prefixed keys
     if (params?.variables) {
       for (const [key, value] of Object.entries(params.variables)) {
-        searchParams.set(`bamboo.variable.${key}`, value);
+        queryParams[`bamboo.variable.${key}`] = value;
       }
     }
 
-    const query = searchParams.toString();
-    return this.request(`/queue/${planKey}${query ? `?${query}` : ''}`, { method: 'POST' });
+    const query = buildQueryString(queryParams);
+    return this.request(appendQuery(`/queue/${planKey}`, query), { method: 'POST' });
   }
 
   async stopBuild(planKey: string): Promise<unknown> {
@@ -251,13 +267,13 @@ export class BambooClient {
   }
 
   async getBuildResult(buildKey: string, expand?: string): Promise<unknown> {
-    const query = expand ? `?expand=${expand}` : '';
-    return this.request(`/result/${buildKey}${query}`);
+    const query = buildQueryString({ expand });
+    return this.request(appendQuery(`/result/${buildKey}`, query));
   }
 
   async getLatestBuildResult(planKey: string, expand?: string): Promise<unknown> {
-    const query = expand ? `?expand=${expand}` : '';
-    return this.request(`/result/${planKey}/latest${query}`);
+    const query = buildQueryString({ expand });
+    return this.request(appendQuery(`/result/${planKey}/latest`, query));
   }
 
   async listBuildResults(params?: {
@@ -269,12 +285,13 @@ export class BambooClient {
     expand?: string;
     includeAllStates?: boolean;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.buildState) searchParams.set('buildstate', params.buildState);
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-    if (params?.expand) searchParams.set('expand', params.expand);
-    if (params?.includeAllStates) searchParams.set('includeAllStates', 'true');
+    const query = buildQueryString({
+      'buildstate': params?.buildState,
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+      'expand': params?.expand,
+      'includeAllStates': params?.includeAllStates,
+    });
 
     let endpoint = '/result';
     if (params?.projectKey && params?.planKey) {
@@ -283,8 +300,7 @@ export class BambooClient {
       endpoint = `/result/${params.projectKey}`;
     }
 
-    const query = searchParams.toString();
-    return this.request(`${endpoint}${query ? `?${query}` : ''}`);
+    return this.request(appendQuery(endpoint, query));
   }
 
   async getBuildLogs(buildKey: string, jobKey?: string): Promise<unknown> {
@@ -491,26 +507,24 @@ export class BambooClient {
     startIndex?: number;
     maxResults?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.startIndex) searchParams.set('start-index', String(params.startIndex));
-    if (params?.maxResults) searchParams.set('max-result', String(params.maxResults));
-
-    const query = searchParams.toString();
-    return this.request(`/deploy/environment/${environmentId}/results${query ? `?${query}` : ''}`);
+    const query = buildQueryString({
+      'start-index': params?.startIndex,
+      'max-result': params?.maxResults,
+    });
+    return this.request(appendQuery(`/deploy/environment/${environmentId}/results`, query));
   }
 
   async getDeploymentResult(deploymentResultId: string | number, params?: {
     includeLogs?: boolean;
     maxLogLines?: number;
   }): Promise<unknown> {
-    const searchParams = new URLSearchParams();
-    if (params?.includeLogs) {
-      searchParams.set('includeLogs', 'true');
-      searchParams.set('max-result', String(params?.maxLogLines || 1000));
-    }
-
-    const query = searchParams.toString();
-    return this.request(`/deploy/result/${deploymentResultId}${query ? `?${query}` : ''}`);
+    const query = params?.includeLogs
+      ? buildQueryString({
+          'includeLogs': true,
+          'max-result': params?.maxLogLines || 1000,
+        })
+      : '';
+    return this.request(appendQuery(`/deploy/result/${deploymentResultId}`, query));
   }
 }
 

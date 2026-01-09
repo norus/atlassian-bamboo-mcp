@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BambooClient } from '../bamboo-client.js';
+import { formatError, jsonResponse } from './utils.js';
 
 export function registerDeploymentTools(server: McpServer, client: BambooClient): void {
-  // List deployment projects
   server.tool(
     'bamboo_list_deployment_projects',
     'List all Bamboo deployment projects',
@@ -11,29 +11,13 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
     async () => {
       try {
         const projects = await client.listDeploymentProjects();
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(projects, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(projects);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get deployment project
   server.tool(
     'bamboo_get_deployment_project',
     'Get details of a specific deployment project',
@@ -43,29 +27,13 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
     async ({ project_id }) => {
       try {
         const project = await client.getDeploymentProject(project_id);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(project, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(project);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Trigger deployment
   server.tool(
     'bamboo_trigger_deployment',
     'Trigger a deployment to an environment',
@@ -76,29 +44,13 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
     async ({ version_id, environment_id }) => {
       try {
         const result = await client.triggerDeployment(version_id, environment_id);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get deployment results
   server.tool(
     'bamboo_get_deployment_results',
     'Get deployment results for an environment',
@@ -113,29 +65,13 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
           startIndex: start_index,
           maxResults: max_results,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(results, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(results);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );
 
-  // Get deployment result with logs
   server.tool(
     'bamboo_get_deployment_result',
     'Get a specific deployment result with optional logs',
@@ -150,24 +86,9 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
           includeLogs: include_logs,
           maxLogLines: max_log_lines,
         });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return jsonResponse(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
+        return formatError(error);
       }
     }
   );

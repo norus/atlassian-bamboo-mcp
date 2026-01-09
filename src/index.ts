@@ -35,15 +35,13 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   // Handle graceful shutdown
-  process.on('SIGINT', async () => {
+  async function shutdown(): Promise<void> {
     await server.close();
     process.exit(0);
-  });
+  }
 
-  process.on('SIGTERM', async () => {
-    await server.close();
-    process.exit(0);
-  });
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch((error) => {
