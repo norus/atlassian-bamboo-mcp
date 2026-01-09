@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.1...v1.1.2) (2026-01-09)
+
+
+### Bug Fixes
+
+* **ci:** match original publish.yml setup for trusted publishers ([2ff9306](https://github.com/norus/atlassian-bamboo-mcp/commit/2ff930679ee15f91bd8e9b7de78428db3683ba29))
+
 ## [1.1.1](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.0...v1.1.1) (2026-01-09)
 
 
