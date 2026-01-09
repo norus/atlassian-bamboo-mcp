@@ -64,6 +64,11 @@ jobs:
         run: npm run build
 
       - name: Release
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      - name: Publish to npm
+        if: steps.release.outcome == 'success'
+        run: npm publish --provenance --access public
