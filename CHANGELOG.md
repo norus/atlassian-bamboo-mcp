@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.0...v1.1.1) (2026-01-09)
+
+
+### Bug Fixes
+
+* **ci:** remove registry-url to fix OIDC auth ([af9ff11](https://github.com/norus/atlassian-bamboo-mcp/commit/af9ff111d95206a422c7bfa90f355750aaacd4a8))
+
 # [1.1.0](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.0.11...v1.1.0) (2026-01-09)
 
 
