@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.2...v1.1.3) (2026-01-09)
+
+
+### Bug Fixes
+
+* **ci:** only publish to npm when new release is created ([cbbd440](https://github.com/norus/atlassian-bamboo-mcp/commit/cbbd4404aabe16ba2f6faa53f15124f8fe95c8b6))
+
 ## [1.1.2](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.1...v1.1.2) (2026-01-09)
 
 
