@@ -38,6 +38,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "dependencies": {
@@ -46,9 +47,12 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^4.0.16",
     "msw": "^2.12.7",
+    "semantic-release": "^25.0.2",
     "typescript": "^5.3.0",
     "vitest": "^4.0.16"
   },
