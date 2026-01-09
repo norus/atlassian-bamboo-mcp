@@ -1,5 +1,6 @@
 # Atlassian Bamboo MCP Server
 
+[![CI](https://github.com/norus/atlassian-bamboo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/norus/atlassian-bamboo-mcp/actions/workflows/ci.yml)
 [![NPM Version](https://img.shields.io/npm/v/bamboo-mcp-server?color=red)](https://www.npmjs.com/package/bamboo-mcp-server)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -321,6 +322,12 @@ npm install
 
 # Build
 npm run build
+
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
 
 # Run locally
 BAMBOO_URL="https://bamboo.example.com" \
