@@ -70,8 +70,15 @@ jobs:
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: |
+          output=$(npx semantic-release 2>&1) || true
+          echo "$output"
+          if echo "$output" | grep -q "Published release"; then
+            echo "new_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "new_release=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Publish to npm
-        if: steps.release.outcome == 'success'
+        if: steps.release.outputs.new_release == 'true'
         run: npm publish --provenance --access public
