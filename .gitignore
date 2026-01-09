@@ -7,6 +7,9 @@ bamboo-swagger.json
 # Build output
 dist/
 
+# Test coverage
+coverage/
+
 # Claude Code
 .claude/
 CLAUDE.md

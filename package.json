@@ -11,6 +11,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -44,7 +47,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.3.0"
+    "@vitest/coverage-v8": "^4.0.16",
+    "msw": "^2.12.7",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.16"
   },
   "engines": {
     "node": ">=18.0.0"
