@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.3...v1.2.0) (2026-02-06)
+
+
+### Bug Fixes
+
+* **ci:** bump release job Node.js version from 20 to 22 ([b765d05](https://github.com/norus/atlassian-bamboo-mcp/commit/b765d0554851d63d676764269c4de603a12e13fd))
+
+
+### Features
+
+* add clone plan and create deployment project tools ([b7ab0c3](https://github.com/norus/atlassian-bamboo-mcp/commit/b7ab0c3c83f98d40e25878e66b2a62e681ebd70e))
+
 ## [1.1.3](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.2...v1.1.3) (2026-01-09)
 
 
