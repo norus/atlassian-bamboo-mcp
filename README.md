@@ -37,7 +37,7 @@ No tab-switching, no manual navigation — just ask and get instant CI/CD insigh
 
 ## Features
 
-- **24 tools** covering all major Bamboo operations
+- **26 tools** covering all major Bamboo operations
 - **Build logs** with actual content (not just URLs)
 - **Deployment logs** with full output
 - **Proxy support** for corporate environments
@@ -246,7 +246,7 @@ services:
 | `bamboo_list_projects` | List all projects |
 | `bamboo_get_project` | Get project details by key |
 
-### Plans (5)
+### Plans (6)
 
 | Tool | Description |
 |------|-------------|
@@ -255,6 +255,7 @@ services:
 | `bamboo_search_plans` | Search plans by name |
 | `bamboo_enable_plan` | Enable a build plan |
 | `bamboo_disable_plan` | Disable a build plan |
+| `bamboo_clone_plan` | Clone a build plan to a new plan |
 
 ### Branches (2)
 
@@ -282,12 +283,13 @@ services:
 | `bamboo_get_build_queue` | Get current build queue |
 | `bamboo_get_deployment_queue` | Get deployment queue status |
 
-### Deployments (5)
+### Deployments (6)
 
 | Tool | Description |
 |------|-------------|
 | `bamboo_list_deployment_projects` | List deployment projects |
 | `bamboo_get_deployment_project` | Get deployment project details |
+| `bamboo_create_deployment_project` | Create a deployment project linked to a build plan |
 | `bamboo_get_deployment_results` | Get deployment results for environment |
 | `bamboo_get_deployment_result` | Get deployment result with logs |
 | `bamboo_trigger_deployment` | Trigger a deployment |

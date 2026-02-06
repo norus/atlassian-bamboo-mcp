@@ -97,4 +97,23 @@ export function registerPlanTools(server: McpServer, client: BambooClient): void
       }
     }
   );
+
+  server.tool(
+    'bamboo_clone_plan',
+    'Clone an existing Bamboo build plan to a new plan',
+    {
+      source_plan_key: z.string().describe('Source plan key (e.g., "PROJ-PLAN")'),
+      dest_project_key: z.string().describe('Destination project key (e.g., "NEWPROJ")'),
+      dest_plan_key: z.string().describe('New plan key within destination project (e.g., "NEWPLAN")'),
+    },
+    async ({ source_plan_key, dest_project_key, dest_plan_key }) => {
+      try {
+        const destKey = `${dest_project_key}-${dest_plan_key}`;
+        const result = await client.clonePlan(source_plan_key, destKey);
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
 }

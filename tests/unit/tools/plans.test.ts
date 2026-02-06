@@ -11,6 +11,7 @@ describe('plans tools', () => {
     searchPlans: ReturnType<typeof vi.fn>;
     enablePlan: ReturnType<typeof vi.fn>;
     disablePlan: ReturnType<typeof vi.fn>;
+    clonePlan: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -21,18 +22,20 @@ describe('plans tools', () => {
       searchPlans: vi.fn(),
       enablePlan: vi.fn(),
       disablePlan: vi.fn(),
+      clonePlan: vi.fn(),
     };
     registerPlanTools(mockServer as unknown as Parameters<typeof registerPlanTools>[0], mockClient as unknown as BambooClient);
   });
 
-  it('should register all 5 plan tools', () => {
+  it('should register all 6 plan tools', () => {
     const tools = mockServer.getRegisteredTools();
-    expect(tools.size).toBe(5);
+    expect(tools.size).toBe(6);
     expect(tools.has('bamboo_list_plans')).toBe(true);
     expect(tools.has('bamboo_get_plan')).toBe(true);
     expect(tools.has('bamboo_search_plans')).toBe(true);
     expect(tools.has('bamboo_enable_plan')).toBe(true);
     expect(tools.has('bamboo_disable_plan')).toBe(true);
+    expect(tools.has('bamboo_clone_plan')).toBe(true);
   });
 
   describe('bamboo_list_plans', () => {
@@ -221,6 +224,93 @@ describe('plans tools', () => {
 
       expect(result).toEqual({
         content: [{ type: 'text', text: 'Error: Plan not found' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_clone_plan', () => {
+    it('should clone a plan within the same project', async () => {
+      const mockData = {
+        key: 'PROJ-NEWPLAN',
+        name: 'Cloned Plan',
+        shortName: 'NEWPLAN',
+      };
+      mockClient.clonePlan.mockResolvedValue(mockData);
+
+      const result = await mockServer.invokeTool('bamboo_clone_plan', {
+        source_plan_key: 'PROJ-PLAN',
+        dest_project_key: 'PROJ',
+        dest_plan_key: 'NEWPLAN',
+      });
+
+      expect(mockClient.clonePlan).toHaveBeenCalledWith('PROJ-PLAN', 'PROJ-NEWPLAN');
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(mockData, null, 2) }],
+      });
+    });
+
+    it('should clone a plan to a different project', async () => {
+      const mockData = {
+        key: 'NEWPROJ-NEWPLAN',
+        name: 'Cloned Plan',
+        shortName: 'NEWPLAN',
+      };
+      mockClient.clonePlan.mockResolvedValue(mockData);
+
+      const result = await mockServer.invokeTool('bamboo_clone_plan', {
+        source_plan_key: 'PROJ-PLAN',
+        dest_project_key: 'NEWPROJ',
+        dest_plan_key: 'NEWPLAN',
+      });
+
+      expect(mockClient.clonePlan).toHaveBeenCalledWith('PROJ-PLAN', 'NEWPROJ-NEWPLAN');
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(mockData, null, 2) }],
+      });
+    });
+
+    it('should handle clone to existing plan key (conflict)', async () => {
+      mockClient.clonePlan.mockRejectedValue(new Error('Bamboo API error (409): Plan key already exists'));
+
+      const result = await mockServer.invokeTool('bamboo_clone_plan', {
+        source_plan_key: 'PROJ-PLAN',
+        dest_project_key: 'PROJ',
+        dest_plan_key: 'EXISTINGPLAN',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Bamboo API error (409): Plan key already exists' }],
+        isError: true,
+      });
+    });
+
+    it('should handle clone from non-existent source plan', async () => {
+      mockClient.clonePlan.mockRejectedValue(new Error('Bamboo API error (404): Plan not found'));
+
+      const result = await mockServer.invokeTool('bamboo_clone_plan', {
+        source_plan_key: 'INVALID-PLAN',
+        dest_project_key: 'PROJ',
+        dest_plan_key: 'NEWPLAN',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Bamboo API error (404): Plan not found' }],
+        isError: true,
+      });
+    });
+
+    it('should handle clone to non-existent project', async () => {
+      mockClient.clonePlan.mockRejectedValue(new Error('Bamboo API error (404): Project not found'));
+
+      const result = await mockServer.invokeTool('bamboo_clone_plan', {
+        source_plan_key: 'PROJ-PLAN',
+        dest_project_key: 'NONEXISTENT',
+        dest_plan_key: 'NEWPLAN',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Bamboo API error (404): Project not found' }],
         isError: true,
       });
     });

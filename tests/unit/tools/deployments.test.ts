@@ -12,6 +12,7 @@ describe('Deployment Tools', () => {
     mockClient = {
       listDeploymentProjects: vi.fn(),
       getDeploymentProject: vi.fn(),
+      createDeploymentProject: vi.fn(),
       triggerDeployment: vi.fn(),
       getDeploymentResults: vi.fn(),
       getDeploymentResult: vi.fn(),
@@ -60,8 +61,16 @@ describe('Deployment Tools', () => {
       expect(tool?.description).toBe('Get a specific deployment result with optional logs');
     });
 
-    it('should register all 5 deployment tools', () => {
-      expect(mockServer.getRegisteredTools().size).toBe(5);
+    it('should register bamboo_create_deployment_project tool', () => {
+      const tool = mockServer.getTool('bamboo_create_deployment_project');
+
+      expect(tool).toBeDefined();
+      expect(tool?.name).toBe('bamboo_create_deployment_project');
+      expect(tool?.description).toBe('Create a new Bamboo deployment project linked to a build plan');
+    });
+
+    it('should register all 6 deployment tools', () => {
+      expect(mockServer.getRegisteredTools().size).toBe(6);
     });
   });
 
@@ -162,6 +171,91 @@ describe('Deployment Tools', () => {
           {
             type: 'text',
             text: 'Error: Bamboo API error (404): Project not found',
+          },
+        ],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_create_deployment_project', () => {
+    it('should create deployment project and return JSON response', async () => {
+      const mockProject = {
+        id: 1003,
+        name: 'New Deployment',
+        key: { key: 'PROJ-PLAN' },
+        planKey: { key: 'PROJ-PLAN' },
+        environments: [],
+      };
+
+      vi.mocked(mockClient.createDeploymentProject!).mockResolvedValue(mockProject);
+
+      const result = await mockServer.invokeTool('bamboo_create_deployment_project', {
+        name: 'New Deployment',
+        plan_key: 'PROJ-PLAN',
+      });
+
+      expect(mockClient.createDeploymentProject).toHaveBeenCalledWith(
+        'New Deployment',
+        'PROJ-PLAN',
+        undefined
+      );
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(mockProject, null, 2),
+          },
+        ],
+      });
+    });
+
+    it('should create deployment project with optional description', async () => {
+      const mockProject = {
+        id: 1004,
+        name: 'New Deployment',
+        description: 'A deployment project for testing',
+        planKey: { key: 'PROJ-PLAN' },
+      };
+
+      vi.mocked(mockClient.createDeploymentProject!).mockResolvedValue(mockProject);
+
+      const result = await mockServer.invokeTool('bamboo_create_deployment_project', {
+        name: 'New Deployment',
+        plan_key: 'PROJ-PLAN',
+        description: 'A deployment project for testing',
+      });
+
+      expect(mockClient.createDeploymentProject).toHaveBeenCalledWith(
+        'New Deployment',
+        'PROJ-PLAN',
+        'A deployment project for testing'
+      );
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(mockProject, null, 2),
+          },
+        ],
+      });
+    });
+
+    it('should return formatted error on API error', async () => {
+      vi.mocked(mockClient.createDeploymentProject!).mockRejectedValue(
+        new Error('Bamboo API error (400): Name is required')
+      );
+
+      const result = await mockServer.invokeTool('bamboo_create_deployment_project', {
+        name: '',
+        plan_key: 'PROJ-PLAN',
+      });
+
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: 'Error: Bamboo API error (400): Name is required',
           },
         ],
         isError: true,
