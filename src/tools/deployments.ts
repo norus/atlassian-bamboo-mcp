@@ -35,6 +35,24 @@ export function registerDeploymentTools(server: McpServer, client: BambooClient)
   );
 
   server.tool(
+    'bamboo_create_deployment_project',
+    'Create a new Bamboo deployment project linked to a build plan',
+    {
+      name: z.string().describe('Name of the deployment project'),
+      plan_key: z.string().describe('Build plan key to link (e.g., "PROJ-PLAN")'),
+      description: z.string().optional().describe('Description of the deployment project'),
+    },
+    async ({ name, plan_key, description }) => {
+      try {
+        const result = await client.createDeploymentProject(name, plan_key, description);
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
     'bamboo_trigger_deployment',
     'Trigger a deployment to an environment',
     {

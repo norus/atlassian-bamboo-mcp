@@ -405,6 +405,68 @@ describe('BambooClient', () => {
     });
   });
 
+  describe('clonePlan()', () => {
+    it('should clone a plan within the same project', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        key: 'PROJ-NEWPLAN',
+        name: 'Cloned Plan',
+        shortName: 'NEWPLAN',
+      }));
+
+      const result = await client.clonePlan('PROJ-PLAN1', 'PROJ-NEWPLAN') as { key: string };
+      expect(result.key).toBe('PROJ-NEWPLAN');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/clone/PROJ-PLAN1:PROJ-NEWPLAN`,
+        expect.objectContaining({ method: 'PUT' })
+      );
+    });
+
+    it('should clone a plan to a different project', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        key: 'NEWPROJ-PLAN1',
+        name: 'Cloned Plan',
+        shortName: 'PLAN1',
+      }));
+
+      const result = await client.clonePlan('PROJ-PLAN1', 'NEWPROJ-PLAN1') as { key: string };
+      expect(result.key).toBe('NEWPROJ-PLAN1');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/clone/PROJ-PLAN1:NEWPROJ-PLAN1`,
+        expect.objectContaining({ method: 'PUT' })
+      );
+    });
+
+    it('should throw error when cloning to existing plan key (409)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Plan key already exists', 409));
+
+      await expect(client.clonePlan('PROJ-PLAN1', 'PROJ-EXISTINGPLAN')).rejects.toThrow('Bamboo API error (409)');
+    });
+
+    it('should throw error when source plan does not exist (404)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Plan not found', 404));
+
+      await expect(client.clonePlan('INVALID-PLAN', 'PROJ-NEWPLAN')).rejects.toThrow('Bamboo API error (404)');
+    });
+
+    it('should throw error when destination project does not exist (404)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Project not found', 404));
+
+      await expect(client.clonePlan('PROJ-PLAN1', 'NONEXISTENT-NEWPLAN')).rejects.toThrow('Bamboo API error (404)');
+    });
+  });
+
   // ============================================================================
   // 5. Branch endpoints
   // ============================================================================
@@ -1002,6 +1064,89 @@ describe('BambooClient', () => {
         `${BASE_URL}/rest/api/latest/deploy/project/1002`,
         expect.any(Object)
       );
+    });
+  });
+
+  describe('createDeploymentProject()', () => {
+    it('should create deployment project with name and planKey only', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        id: 1003,
+        name: 'New Deployment',
+        key: { key: 'PROJ-PLAN' },
+        planKey: { key: 'PROJ-PLAN' },
+      }));
+
+      const result = await client.createDeploymentProject('New Deployment', 'PROJ-PLAN') as { id: number; name: string };
+      expect(result.id).toBe(1003);
+      expect(result.name).toBe('New Deployment');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/deploy/project`,
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            name: 'New Deployment',
+            planKey: { key: 'PROJ-PLAN' },
+          }),
+        })
+      );
+    });
+
+    it('should create deployment project with description', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        id: 1004,
+        name: 'New Deployment',
+        description: 'A test deployment project',
+        planKey: { key: 'PROJ-PLAN' },
+      }));
+
+      const result = await client.createDeploymentProject(
+        'New Deployment',
+        'PROJ-PLAN',
+        'A test deployment project'
+      ) as { id: number; description: string };
+      expect(result.id).toBe(1004);
+      expect(result.description).toBe('A test deployment project');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/deploy/project`,
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            name: 'New Deployment',
+            planKey: { key: 'PROJ-PLAN' },
+            description: 'A test deployment project',
+          }),
+        })
+      );
+    });
+
+    it('should throw error on validation error (400)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Name is required', 400));
+
+      await expect(client.createDeploymentProject('', 'PROJ-PLAN')).rejects.toThrow('Bamboo API error (400)');
+    });
+
+    it('should throw error on permission denied (403)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Permission denied', 403));
+
+      await expect(client.createDeploymentProject('New Deployment', 'PROJ-PLAN')).rejects.toThrow('Bamboo API error (403)');
+    });
+
+    it('should throw error on invalid plan key (404)', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Plan not found', 404));
+
+      await expect(client.createDeploymentProject('New Deployment', 'INVALID-PLAN')).rejects.toThrow('Bamboo API error (404)');
     });
   });
 

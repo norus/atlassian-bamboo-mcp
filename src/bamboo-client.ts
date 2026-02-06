@@ -143,6 +143,10 @@ export class BambooClient {
     return this.request(`/plan/${planKey}/enable`, { method: 'DELETE' });
   }
 
+  async clonePlan(sourceKey: string, destKey: string): Promise<unknown> {
+    return this.request(`/clone/${sourceKey}:${destKey}`, { method: 'PUT' });
+  }
+
   // Branch endpoints
   async listPlanBranches(planKey: string, params?: {
     enabledOnly?: boolean;
@@ -491,6 +495,21 @@ export class BambooClient {
 
   async getDeploymentProject(projectId: string | number): Promise<unknown> {
     return this.request(`/deploy/project/${projectId}`);
+  }
+
+  async createDeploymentProject(
+    name: string,
+    planKey: string,
+    description?: string
+  ): Promise<unknown> {
+    return this.request('/deploy/project', {
+      method: 'PUT',
+      body: JSON.stringify({
+        name,
+        planKey: { key: planKey },
+        ...(description && { description }),
+      }),
+    });
   }
 
   async triggerDeployment(
