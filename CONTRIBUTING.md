@@ -4,6 +4,8 @@ Thanks for your interest in contributing to Atlassian Bamboo MCP Server!
 
 ## Getting started
 
+Development requires Node.js 22.12 or newer (the runtime itself supports 18+).
+
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/atlassian-bamboo-mcp.git`
 3. Install dependencies: `npm install`

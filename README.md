@@ -47,7 +47,7 @@ No tab-switching, no manual navigation — just ask and get instant CI/CD insigh
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (22.12+ for development)
 - Bamboo personal access token ([how to create](#creating-a-bamboo-token))
 
 ### From Source
