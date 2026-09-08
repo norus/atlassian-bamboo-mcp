@@ -122,13 +122,62 @@ export interface BambooBuildResult {
       link: { href: string };
     }>;
   };
-  testResults?: {
-    all: number;
+  successfulTestCount?: number;
+  failedTestCount?: number;
+  skippedTestCount?: number;
+  quarantinedTestCount?: number;
+  testResults?: BambooRawTestResults;
+}
+
+/** A Bamboo collection wrapper, e.g. `{ size: 3, "start-index": 0, "max-result": 25 }` */
+export interface BambooCollectionInfo {
+  size?: number;
+  'start-index'?: number;
+  'max-result'?: number;
+}
+
+/** Raw `testResults` object on a build result, as returned by the Bamboo REST API */
+export interface BambooRawTestResults {
+  all?: BambooCollectionInfo;
+  successful?: BambooCollectionInfo;
+  failed?: BambooCollectionInfo;
+  skipped?: BambooCollectionInfo;
+  quarantined?: BambooCollectionInfo;
+  failedTests?: BambooCollectionInfo & {
+    testResult?: BambooRawTestResult[];
+  };
+}
+
+export interface BambooRawTestResult {
+  className: string;
+  methodName: string;
+  status: string;
+  duration?: number;
+  errors?: BambooCollectionInfo & {
+    error?: Array<{ message?: string; content?: string }>;
+  };
+}
+
+export interface BambooFailedTest {
+  jobKey?: string;
+  className: string;
+  methodName: string;
+  status: string;
+  durationMs?: number;
+  errors: string[];
+}
+
+export interface BambooTestResultsSummary {
+  buildKey: string;
+  state: string;
+  summary: {
+    total: number;
     successful: number;
     failed: number;
     skipped: number;
     quarantined: number;
   };
+  failedTests: BambooFailedTest[];
 }
 
 export interface BambooBuildResultList {

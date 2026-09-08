@@ -158,12 +158,16 @@ const buildResultWithTestResults: BambooBuildResult = {
     href: `${BASE_URL}/rest/api/latest/result/WEBAPP-BACK-45`,
     rel: 'self',
   },
+  successfulTestCount: 145,
+  failedTestCount: 0,
+  skippedTestCount: 5,
+  quarantinedTestCount: 0,
   testResults: {
-    all: 150,
-    successful: 145,
-    failed: 0,
-    skipped: 5,
-    quarantined: 0,
+    all: { size: 150 },
+    successful: { size: 145 },
+    failed: { size: 0 },
+    skipped: { size: 5 },
+    quarantined: { size: 0 },
   },
 };
 

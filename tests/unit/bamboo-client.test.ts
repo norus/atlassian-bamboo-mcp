@@ -981,7 +981,7 @@ describe('BambooClient', () => {
   });
 
   describe('getDeploymentQueue()', () => {
-    it('should get deployment queue when available', async () => {
+    it('should get deployment queue from /queue/deployment', async () => {
       const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
 
       (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
@@ -995,16 +995,358 @@ describe('BambooClient', () => {
 
       const result = await client.getDeploymentQueue() as { queuedDeployments: { size: number } };
       expect(result.queuedDeployments.size).toBe(1);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/queue/deployment?expand=queuedDeployments`,
+        expect.any(Object)
+      );
     });
 
-    it('should handle deployment queue not available (404)', async () => {
+    it('should throw on API error', async () => {
       const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
 
-      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Not Found', 404));
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse('Forbidden', 403));
 
-      const result = await client.getDeploymentQueue() as { available: boolean; message: string };
-      expect(result.available).toBe(false);
-      expect(result.message).toContain('not available');
+      await expect(client.getDeploymentQueue()).rejects.toThrow('Bamboo API error (403)');
+    });
+  });
+
+  // ============================================================================
+  // 7b. Build comments and labels
+  // ============================================================================
+  describe('getBuildComments()', () => {
+    it('should get comments for a build result', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        comments: { size: 1, comment: [{ author: 'admin', content: 'Looks good' }] },
+      }));
+
+      const result = await client.getBuildComments('PROJ-PLAN-123') as { comments: { size: number } };
+      expect(result.comments.size).toBe(1);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123/comment`,
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('addBuildComment()', () => {
+    it('should POST comment content to the build result and resolve on 204', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse(null, 204));
+
+      const result = await client.addBuildComment('PROJ-PLAN-123', 'Deployed to staging');
+      expect(result).toEqual({});
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123/comment`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ content: 'Deployed to staging' }),
+        })
+      );
+    });
+  });
+
+  describe('getBuildLabels()', () => {
+    it('should get labels for a build result', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        labels: { size: 2, label: [{ name: 'release' }, { name: 'hotfix' }] },
+      }));
+
+      const result = await client.getBuildLabels('PROJ-PLAN-123') as { labels: { size: number } };
+      expect(result.labels.size).toBe(2);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123/label`,
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('addBuildLabel()', () => {
+    it('should POST label name to the build result', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse(null));
+
+      await client.addBuildLabel('PROJ-PLAN-123', 'release');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123/label`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ name: 'release' }),
+        })
+      );
+    });
+  });
+
+  describe('removeBuildLabel()', () => {
+    it('should DELETE the label from the build result', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse(null));
+
+      await client.removeBuildLabel('PROJ-PLAN-123', 'my label');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123/label/my%20label`,
+        expect.objectContaining({ method: 'DELETE' })
+      );
+    });
+  });
+
+  describe('getBrokenBuildResponsibility()', () => {
+    it('should call the responsibility REST API for a plan or result key', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        planKey: 'PROJ-PLAN',
+        responsibleUsers: [{ name: 'jdoe', fullName: 'John Doe' }],
+      }));
+
+      const result = await client.getBrokenBuildResponsibility('PROJ-PLAN-123') as { responsibleUsers: unknown[] };
+      expect(result.responsibleUsers).toHaveLength(1);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/responsibility/latest/brokenBuild/PROJ-PLAN-123`,
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+        })
+      );
+    });
+  });
+
+  describe('getTestResults()', () => {
+    const failedBuild = {
+      key: 'PROJ-PLAN-123',
+      state: 'Failed',
+      successfulTestCount: 10,
+      failedTestCount: 2,
+      skippedTestCount: 1,
+      quarantinedTestCount: 0,
+      testResults: {
+        all: { size: 13 },
+        failedTests: {
+          size: 2,
+          testResult: [
+            {
+              className: 'com.example.FooTest',
+              methodName: 'testBar',
+              status: 'failed',
+              duration: 120,
+              errors: {
+                size: 1,
+                error: [{ message: 'AssertionError: expected 1 but was 2' }],
+              },
+            },
+            {
+              className: 'com.example.BazTest',
+              methodName: 'testQux',
+              status: 'failed',
+              duration: 5,
+              errors: { size: 0, error: [] },
+            },
+          ],
+        },
+      },
+    };
+
+    it('should request failed tests with errors expanded', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse(failedBuild));
+
+      await client.getTestResults('PROJ-PLAN-123');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-123?expand=testResults.failedTests.testResult.errors`,
+        expect.any(Object)
+      );
+    });
+
+    it('should summarise counts and flatten failed tests', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse(failedBuild));
+
+      const result = await client.getTestResults('PROJ-PLAN-123');
+
+      expect(result).toEqual({
+        buildKey: 'PROJ-PLAN-123',
+        state: 'Failed',
+        summary: { total: 13, successful: 10, failed: 2, skipped: 1, quarantined: 0 },
+        failedTests: [
+          {
+            className: 'com.example.FooTest',
+            methodName: 'testBar',
+            status: 'failed',
+            durationMs: 120,
+            errors: ['AssertionError: expected 1 but was 2'],
+          },
+          {
+            className: 'com.example.BazTest',
+            methodName: 'testQux',
+            status: 'failed',
+            durationMs: 5,
+            errors: [],
+          },
+        ],
+      });
+    });
+
+    it('should default counts to zero and derive total when Bamboo omits test fields', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        key: 'PROJ-PLAN-125',
+        state: 'Unknown',
+      }));
+
+      const result = await client.getTestResults('PROJ-PLAN-125');
+
+      expect(result.summary).toEqual({ total: 0, successful: 0, failed: 0, skipped: 0, quarantined: 0 });
+      expect(result.failedTests).toEqual([]);
+    });
+
+    it('should sum counts for total when testResults.all is missing and tolerate an empty drill-down', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock)
+        .mockResolvedValueOnce(createMockResponse({
+          key: 'PROJ-PLAN-126',
+          state: 'Failed',
+          successfulTestCount: 3,
+          failedTestCount: 1,
+          skippedTestCount: 2,
+          quarantinedTestCount: 1,
+          testResults: { failedTests: { size: 1 } },
+        }))
+        .mockResolvedValueOnce(createMockResponse({ key: 'PROJ-PLAN-126' }));
+
+      const result = await client.getTestResults('PROJ-PLAN-126');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(result.summary.total).toBe(7);
+      expect(result.failedTests).toEqual([]);
+    });
+
+    it('should read error text from message or content, skip empty errors, and tolerate missing duration', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        key: 'PROJ-PLAN-127',
+        state: 'Failed',
+        failedTestCount: 1,
+        testResults: {
+          failedTests: {
+            testResult: [
+              {
+                className: 'FooTest',
+                methodName: 'testBar',
+                status: 'failed',
+                errors: { error: [{ message: 'real error' }, { content: 'from content' }, {}] },
+              },
+              { className: 'BazTest', methodName: 'testQux', status: 'failed' },
+            ],
+          },
+        },
+      }));
+
+      const result = await client.getTestResults('PROJ-PLAN-127');
+
+      expect(result.failedTests).toEqual([
+        { className: 'FooTest', methodName: 'testBar', status: 'failed', durationMs: undefined, errors: ['real error', 'from content'] },
+        { className: 'BazTest', methodName: 'testQux', status: 'failed', durationMs: undefined, errors: [] },
+      ]);
+    });
+
+    it('should drill into job results when a plan-level result reports failures without details', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock)
+        .mockResolvedValueOnce(createMockResponse({
+          key: 'PROJ-PLAN-200',
+          state: 'Failed',
+          successfulTestCount: 8,
+          failedTestCount: 2,
+          skippedTestCount: 0,
+          quarantinedTestCount: 0,
+          testResults: { all: { size: 10 }, failedTests: { size: 0 } },
+        }))
+        .mockResolvedValueOnce(createMockResponse({
+          key: 'PROJ-PLAN-200',
+          stages: {
+            stage: [
+              {
+                results: {
+                  result: [
+                    {
+                      key: 'PROJ-PLAN-JOB1-200',
+                      testResults: {
+                        failedTests: {
+                          testResult: [
+                            { className: 'FooTest', methodName: 'testA', status: 'failed', duration: 3, errors: { error: [{ message: 'A broke' }] } },
+                          ],
+                        },
+                      },
+                    },
+                    { key: 'PROJ-PLAN-JOB2-200', testResults: { failedTests: { size: 0 } } },
+                  ],
+                },
+              },
+              {
+                results: {
+                  result: [
+                    {
+                      key: 'PROJ-PLAN-JOB3-200',
+                      testResults: {
+                        failedTests: {
+                          testResult: [
+                            { className: 'BarTest', methodName: 'testB', status: 'failed', duration: 7, errors: { error: [{ message: 'B broke' }] } },
+                          ],
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        }));
+
+      const result = await client.getTestResults('PROJ-PLAN-200');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        `${BASE_URL}/rest/api/latest/result/PROJ-PLAN-200?expand=stages.stage.results.result.testResults.failedTests.testResult.errors`,
+        expect.any(Object)
+      );
+      expect(result.summary).toEqual({ total: 10, successful: 8, failed: 2, skipped: 0, quarantined: 0 });
+      expect(result.failedTests).toEqual([
+        { jobKey: 'PROJ-PLAN-JOB1-200', className: 'FooTest', methodName: 'testA', status: 'failed', durationMs: 3, errors: ['A broke'] },
+        { jobKey: 'PROJ-PLAN-JOB3-200', className: 'BarTest', methodName: 'testB', status: 'failed', durationMs: 7, errors: ['B broke'] },
+      ]);
+    });
+
+    it('should return an empty failedTests list for a build with no failures', async () => {
+      const client = new BambooClient({ baseUrl: BASE_URL, token: 'test-token' });
+      (mockFetch as Mock).mockResolvedValueOnce(createMockResponse({
+        key: 'PROJ-PLAN-124',
+        state: 'Successful',
+        successfulTestCount: 13,
+        failedTestCount: 0,
+        skippedTestCount: 0,
+        quarantinedTestCount: 0,
+        testResults: { all: { size: 13 }, failedTests: { size: 0 } },
+      }));
+
+      const result = await client.getTestResults('PROJ-PLAN-124');
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result.summary).toEqual({ total: 13, successful: 13, failed: 0, skipped: 0, quarantined: 0 });
+      expect(result.failedTests).toEqual([]);
     });
   });
 

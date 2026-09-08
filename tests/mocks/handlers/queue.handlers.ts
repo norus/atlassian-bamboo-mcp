@@ -1,7 +1,7 @@
 /**
  * MSW handlers for Bamboo queue endpoints
  * - GET /queue - Get build queue
- * - GET /deploy/queue - Get deployment queue
+ * - GET /queue/deployment - Get deployment queue
  */
 import { http, HttpResponse } from 'msw';
 import {
@@ -16,8 +16,8 @@ export const queueHandlers = [
     return HttpResponse.json(buildQueueWithBuilds);
   }),
 
-  // GET /rest/api/latest/deploy/queue - Get deployment queue
-  http.get(`${BASE_URL}/rest/api/latest/deploy/queue`, () => {
+  // GET /rest/api/latest/queue/deployment - Get deployment queue
+  http.get(`${BASE_URL}/rest/api/latest/queue/deployment`, () => {
     return HttpResponse.json(deploymentQueueWithDeployments);
   }),
 ];

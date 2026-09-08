@@ -37,7 +37,7 @@ No tab-switching, no manual navigation — just ask and get instant CI/CD insigh
 
 ## Features
 
-- **26 tools** covering all major Bamboo operations
+- **33 tools** covering all major Bamboo operations
 - **Build logs** with actual content (not just URLs)
 - **Deployment logs** with full output
 - **Proxy support** for corporate environments
@@ -264,7 +264,7 @@ services:
 | `bamboo_list_plan_branches` | List branches for a plan |
 | `bamboo_get_plan_branch` | Get branch details |
 
-### Builds (7)
+### Builds (14)
 
 | Tool | Description |
 |------|-------------|
@@ -275,13 +275,20 @@ services:
 | `bamboo_list_build_results` | List build results with filters |
 | `bamboo_get_build_logs` | Get build log file URLs |
 | `bamboo_get_build_result_logs` | Get build logs with actual content |
+| `bamboo_get_test_results` | Summarised test results with failed tests and errors |
+| `bamboo_get_build_comments` | Get comments on a build |
+| `bamboo_add_build_comment` | Add a comment to a build |
+| `bamboo_get_build_labels` | Get labels on a build |
+| `bamboo_add_build_label` | Add a label to a build |
+| `bamboo_remove_build_label` | Remove a label from a build |
+| `bamboo_get_broken_build_responsibility` | Get users responsible for a broken build |
 
 ### Queue (2)
 
 | Tool | Description |
 |------|-------------|
 | `bamboo_get_build_queue` | Get current build queue |
-| `bamboo_get_deployment_queue` | Get deployment queue status |
+| `bamboo_get_deployment_queue` | Get current deployment queue |
 
 ### Deployments (6)
 

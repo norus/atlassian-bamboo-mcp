@@ -1,5 +1,11 @@
 import { ProxyAgent, fetch as undiciFetch, type RequestInit } from 'undici';
-import type { BambooClientConfig } from './types.js';
+import type {
+  BambooClientConfig,
+  BambooFailedTest,
+  BambooRawTestResult,
+  BambooRawTestResults,
+  BambooTestResultsSummary,
+} from './types.js';
 
 /**
  * Build a URL query string from optional parameters
@@ -21,6 +27,22 @@ function appendQuery(endpoint: string, query: string): string {
   return query ? `${endpoint}?${query}` : endpoint;
 }
 
+/**
+ * Flatten a raw Bamboo test result into the summary shape
+ */
+function toFailedTest(test: BambooRawTestResult, jobKey?: string): BambooFailedTest {
+  return {
+    ...(jobKey && { jobKey }),
+    className: test.className,
+    methodName: test.methodName,
+    status: test.status,
+    durationMs: test.duration,
+    errors: (test.errors?.error ?? [])
+      .map((e) => e.message ?? e.content)
+      .filter((m): m is string => typeof m === 'string'),
+  };
+}
+
 export class BambooClient {
   private baseUrl: string;
   private token: string;
@@ -37,19 +59,20 @@ export class BambooClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit & { apiBase?: string } = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}/rest/api/latest${endpoint}`;
+    const { apiBase = '/rest/api/latest', ...requestOptions } = options;
+    const url = `${this.baseUrl}${apiBase}${endpoint}`;
 
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${this.token}`,
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
+      ...(requestOptions.headers as Record<string, string> || {}),
     };
 
     const fetchOptions: RequestInit = {
-      ...options,
+      ...requestOptions,
       headers,
     };
 
@@ -467,6 +490,101 @@ export class BambooClient {
     };
   }
 
+  // Test results
+  async getTestResults(buildKey: string): Promise<BambooTestResultsSummary> {
+    const result = await this.request<{
+      key: string;
+      state: string;
+      successfulTestCount?: number;
+      failedTestCount?: number;
+      skippedTestCount?: number;
+      quarantinedTestCount?: number;
+      testResults?: BambooRawTestResults;
+    }>(`/result/${buildKey}?expand=testResults.failedTests.testResult.errors`);
+
+    const successful = result.successfulTestCount ?? 0;
+    const failed = result.failedTestCount ?? 0;
+    const skipped = result.skippedTestCount ?? 0;
+    const quarantined = result.quarantinedTestCount ?? 0;
+
+    let failedTests = (result.testResults?.failedTests?.testResult ?? []).map((test) => toFailedTest(test));
+
+    // Bamboo only attaches per-test details to job results. If a plan-level
+    // result reports failures without details, drill down into its jobs.
+    if (failed > 0 && failedTests.length === 0) {
+      failedTests = await this.getFailedTestsFromJobs(buildKey);
+    }
+
+    return {
+      buildKey: result.key,
+      state: result.state,
+      summary: {
+        total: result.testResults?.all?.size ?? successful + failed + skipped + quarantined,
+        successful,
+        failed,
+        skipped,
+        quarantined,
+      },
+      failedTests,
+    };
+  }
+
+  private async getFailedTestsFromJobs(buildKey: string): Promise<BambooFailedTest[]> {
+    const result = await this.request<{
+      stages?: {
+        stage?: Array<{
+          results?: {
+            result?: Array<{
+              key: string;
+              testResults?: BambooRawTestResults;
+            }>;
+          };
+        }>;
+      };
+    }>(`/result/${buildKey}?expand=stages.stage.results.result.testResults.failedTests.testResult.errors`);
+
+    return (result.stages?.stage ?? [])
+      .flatMap((stage) => stage.results?.result ?? [])
+      .flatMap((job) =>
+        (job.testResults?.failedTests?.testResult ?? []).map((test) => toFailedTest(test, job.key))
+      );
+  }
+
+  // Build comments and labels
+  async getBuildComments(buildKey: string): Promise<unknown> {
+    return this.request(`/result/${buildKey}/comment`);
+  }
+
+  async addBuildComment(buildKey: string, content: string): Promise<unknown> {
+    return this.request(`/result/${buildKey}/comment`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async getBuildLabels(buildKey: string): Promise<unknown> {
+    return this.request(`/result/${buildKey}/label`);
+  }
+
+  async addBuildLabel(buildKey: string, name: string): Promise<unknown> {
+    return this.request(`/result/${buildKey}/label`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async removeBuildLabel(buildKey: string, name: string): Promise<unknown> {
+    return this.request(`/result/${buildKey}/label/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getBrokenBuildResponsibility(planOrResultKey: string): Promise<unknown> {
+    return this.request(`/brokenBuild/${planOrResultKey}`, {
+      apiBase: '/rest/responsibility/latest',
+    });
+  }
+
   // Queue endpoints
   async getBuildQueue(expand?: string): Promise<unknown> {
     const query = expand ? `?expand=${expand}` : '?expand=queuedBuilds';
@@ -474,18 +592,7 @@ export class BambooClient {
   }
 
   async getDeploymentQueue(): Promise<unknown> {
-    // Note: The deployment queue endpoint is not available in all Bamboo versions
-    // We'll try to get it from the deployment dashboard instead
-    try {
-      // Try the standard endpoint first
-      return await this.request('/deploy/queue?expand=queuedDeployments');
-    } catch {
-      // If that fails, return info about checking deployment results instead
-      return {
-        message: 'Deployment queue endpoint not available in this Bamboo version. Use bamboo_get_deployment_results to check deployment status for specific environments.',
-        available: false
-      };
-    }
+    return this.request('/queue/deployment?expand=queuedDeployments');
   }
 
   // Deployment endpoints

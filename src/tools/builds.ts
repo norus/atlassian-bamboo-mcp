@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { BambooClient } from '../bamboo-client.js';
-import { formatError, jsonResponse } from './utils.js';
+import { formatError, jsonResponse, textResponse } from './utils.js';
 
 export function registerBuildTools(server: McpServer, client: BambooClient): void {
   server.tool(
@@ -138,6 +138,121 @@ export function registerBuildTools(server: McpServer, client: BambooClient): voi
         const result = await client.getBuildResultWithLogs(build_key, {
           maxLogLines: max_log_lines,
         });
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_get_test_results',
+    'Get a summary of test results for a build, including each failed test with its error messages (and the job it ran in for plan-level keys). Use this to find out why a build failed.',
+    {
+      build_key: z.string().describe('The build result key - plan level (e.g., "PROJ-PLAN-123") or job level (e.g., "PROJ-PLAN-JOB1-123")'),
+    },
+    async ({ build_key }) => {
+      try {
+        const result = await client.getTestResults(build_key);
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_get_build_comments',
+    'Get comments on a build result',
+    {
+      build_key: z.string().describe('The build result key (e.g., "PROJ-PLAN-123")'),
+    },
+    async ({ build_key }) => {
+      try {
+        const result = await client.getBuildComments(build_key);
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_add_build_comment',
+    'Add a comment to a build result',
+    {
+      build_key: z.string().describe('The build result key (e.g., "PROJ-PLAN-123")'),
+      content: z.string().describe('The comment text'),
+    },
+    async ({ build_key, content }) => {
+      try {
+        await client.addBuildComment(build_key, content);
+        return textResponse(`Comment added to build ${build_key}`);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_get_build_labels',
+    'Get labels on a build result',
+    {
+      build_key: z.string().describe('The plan-level build result key (e.g., "PROJ-PLAN-123"); job-level keys are not accepted by Bamboo for labels'),
+    },
+    async ({ build_key }) => {
+      try {
+        const result = await client.getBuildLabels(build_key);
+        return jsonResponse(result);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_add_build_label',
+    'Add a label to a build result',
+    {
+      build_key: z.string().describe('The plan-level build result key (e.g., "PROJ-PLAN-123"); job-level keys are not accepted by Bamboo for labels'),
+      label: z.string().describe('The label name to add'),
+    },
+    async ({ build_key, label }) => {
+      try {
+        await client.addBuildLabel(build_key, label);
+        return textResponse(`Label '${label}' added to build ${build_key}`);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_remove_build_label',
+    'Remove a label from a build result',
+    {
+      build_key: z.string().describe('The plan-level build result key (e.g., "PROJ-PLAN-123"); job-level keys are not accepted by Bamboo for labels'),
+      label: z.string().describe('The label name to remove'),
+    },
+    async ({ build_key, label }) => {
+      try {
+        await client.removeBuildLabel(build_key, label);
+        return textResponse(`Label '${label}' removed from build ${build_key}`);
+      } catch (error) {
+        return formatError(error);
+      }
+    }
+  );
+
+  server.tool(
+    'bamboo_get_broken_build_responsibility',
+    'Get the users responsible for a broken build or plan',
+    {
+      plan_or_build_key: z.string().describe('A plan key (e.g., "PROJ-PLAN") or build result key (e.g., "PROJ-PLAN-123")'),
+    },
+    async ({ plan_or_build_key }) => {
+      try {
+        const result = await client.getBrokenBuildResponsibility(plan_or_build_key);
         return jsonResponse(result);
       } catch (error) {
         return formatError(error);

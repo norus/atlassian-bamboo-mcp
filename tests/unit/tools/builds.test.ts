@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerBuildTools } from '../../../src/tools/builds.js';
-import { createMockMcpServer, type MockMcpServer } from '../../helpers/mock-mcp-server.js';
+import { createMockMcpServer, parseResultJson, type MockMcpServer } from '../../helpers/mock-mcp-server.js';
 import type { BambooClient } from '../../../src/bamboo-client.js';
 
 describe('registerBuildTools', () => {
@@ -17,14 +17,28 @@ describe('registerBuildTools', () => {
       listBuildResults: vi.fn(),
       getBuildLogs: vi.fn(),
       getBuildResultWithLogs: vi.fn(),
+      getTestResults: vi.fn(),
+      getBuildComments: vi.fn(),
+      addBuildComment: vi.fn(),
+      getBuildLabels: vi.fn(),
+      addBuildLabel: vi.fn(),
+      removeBuildLabel: vi.fn(),
+      getBrokenBuildResponsibility: vi.fn(),
     };
 
     registerBuildTools(mockServer as unknown as Parameters<typeof registerBuildTools>[0], mockClient as BambooClient);
   });
 
-  it('should register all 7 build tools', () => {
+  it('should register all 14 build tools', () => {
     const tools = mockServer.getRegisteredTools();
-    expect(tools.size).toBe(7);
+    expect(tools.size).toBe(14);
+    expect(tools.has('bamboo_get_test_results')).toBe(true);
+    expect(tools.has('bamboo_get_build_comments')).toBe(true);
+    expect(tools.has('bamboo_add_build_comment')).toBe(true);
+    expect(tools.has('bamboo_get_build_labels')).toBe(true);
+    expect(tools.has('bamboo_add_build_label')).toBe(true);
+    expect(tools.has('bamboo_remove_build_label')).toBe(true);
+    expect(tools.has('bamboo_get_broken_build_responsibility')).toBe(true);
     expect(tools.has('bamboo_trigger_build')).toBe(true);
     expect(tools.has('bamboo_stop_build')).toBe(true);
     expect(tools.has('bamboo_get_build_result')).toBe(true);
@@ -846,6 +860,187 @@ describe('registerBuildTools', () => {
 
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(mockResult, null, 2) }],
+      });
+    });
+  });
+
+  describe('bamboo_get_test_results', () => {
+    it('should return the summarised test results for a build', async () => {
+      const summary = {
+        buildKey: 'PROJ-PLAN-123',
+        state: 'Failed',
+        summary: { total: 13, successful: 10, failed: 2, skipped: 1, quarantined: 0 },
+        failedTests: [{ className: 'FooTest', methodName: 'testBar', status: 'failed', durationMs: 12, errors: ['boom'] }],
+      };
+      vi.mocked(mockClient.getTestResults!).mockResolvedValue(summary);
+
+      const result = await mockServer.invokeTool('bamboo_get_test_results', { build_key: 'PROJ-PLAN-123' });
+
+      expect(mockClient.getTestResults).toHaveBeenCalledWith('PROJ-PLAN-123');
+      expect(parseResultJson<typeof summary>(result)).toEqual(summary);
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.getTestResults!).mockRejectedValue(new Error('Build not found'));
+
+      const result = await mockServer.invokeTool('bamboo_get_test_results', { build_key: 'INVALID-1' });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Build not found' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_get_build_comments', () => {
+    it('should return comments for a build', async () => {
+      const comments = { comments: { size: 1, comment: [{ author: 'admin', content: 'LGTM' }] } };
+      vi.mocked(mockClient.getBuildComments!).mockResolvedValue(comments);
+
+      const result = await mockServer.invokeTool('bamboo_get_build_comments', { build_key: 'PROJ-PLAN-123' });
+
+      expect(mockClient.getBuildComments).toHaveBeenCalledWith('PROJ-PLAN-123');
+      expect(parseResultJson<typeof comments>(result).comments.size).toBe(1);
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.getBuildComments!).mockRejectedValue(new Error('Build not found'));
+
+      const result = await mockServer.invokeTool('bamboo_get_build_comments', { build_key: 'INVALID-1' });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Build not found' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_add_build_comment', () => {
+    it('should add a comment and confirm', async () => {
+      vi.mocked(mockClient.addBuildComment!).mockResolvedValue({});
+
+      const result = await mockServer.invokeTool('bamboo_add_build_comment', {
+        build_key: 'PROJ-PLAN-123',
+        content: 'Deployed',
+      });
+
+      expect(mockClient.addBuildComment).toHaveBeenCalledWith('PROJ-PLAN-123', 'Deployed');
+      expect(result.content[0].text).toBe('Comment added to build PROJ-PLAN-123');
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.addBuildComment!).mockRejectedValue(new Error('Permission denied'));
+
+      const result = await mockServer.invokeTool('bamboo_add_build_comment', {
+        build_key: 'PROJ-PLAN-123',
+        content: 'x',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Permission denied' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_get_build_labels', () => {
+    it('should return labels for a build', async () => {
+      const labels = { labels: { size: 2, label: [{ name: 'release' }, { name: 'hotfix' }] } };
+      vi.mocked(mockClient.getBuildLabels!).mockResolvedValue(labels);
+
+      const result = await mockServer.invokeTool('bamboo_get_build_labels', { build_key: 'PROJ-PLAN-123' });
+
+      expect(mockClient.getBuildLabels).toHaveBeenCalledWith('PROJ-PLAN-123');
+      expect(parseResultJson<typeof labels>(result).labels.size).toBe(2);
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.getBuildLabels!).mockRejectedValue(new Error('Build not found'));
+
+      const result = await mockServer.invokeTool('bamboo_get_build_labels', { build_key: 'INVALID-1' });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Build not found' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_add_build_label', () => {
+    it('should add a label and confirm', async () => {
+      vi.mocked(mockClient.addBuildLabel!).mockResolvedValue({});
+
+      const result = await mockServer.invokeTool('bamboo_add_build_label', {
+        build_key: 'PROJ-PLAN-123',
+        label: 'release',
+      });
+
+      expect(mockClient.addBuildLabel).toHaveBeenCalledWith('PROJ-PLAN-123', 'release');
+      expect(result.content[0].text).toBe("Label 'release' added to build PROJ-PLAN-123");
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.addBuildLabel!).mockRejectedValue(new Error('Permission denied'));
+
+      const result = await mockServer.invokeTool('bamboo_add_build_label', {
+        build_key: 'PROJ-PLAN-123',
+        label: 'release',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Permission denied' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_remove_build_label', () => {
+    it('should remove a label and confirm', async () => {
+      vi.mocked(mockClient.removeBuildLabel!).mockResolvedValue({});
+
+      const result = await mockServer.invokeTool('bamboo_remove_build_label', {
+        build_key: 'PROJ-PLAN-123',
+        label: 'release',
+      });
+
+      expect(mockClient.removeBuildLabel).toHaveBeenCalledWith('PROJ-PLAN-123', 'release');
+      expect(result.content[0].text).toBe("Label 'release' removed from build PROJ-PLAN-123");
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.removeBuildLabel!).mockRejectedValue(new Error('Label not found'));
+
+      const result = await mockServer.invokeTool('bamboo_remove_build_label', {
+        build_key: 'PROJ-PLAN-123',
+        label: 'nope',
+      });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Label not found' }],
+        isError: true,
+      });
+    });
+  });
+
+  describe('bamboo_get_broken_build_responsibility', () => {
+    it('should return responsible users for a plan or build', async () => {
+      const responsibility = { planKey: 'PROJ-PLAN', responsibleUsers: [{ name: 'jdoe' }] };
+      vi.mocked(mockClient.getBrokenBuildResponsibility!).mockResolvedValue(responsibility);
+
+      const result = await mockServer.invokeTool('bamboo_get_broken_build_responsibility', { plan_or_build_key: 'PROJ-PLAN-123' });
+
+      expect(mockClient.getBrokenBuildResponsibility).toHaveBeenCalledWith('PROJ-PLAN-123');
+      expect(parseResultJson<typeof responsibility>(result).responsibleUsers).toHaveLength(1);
+    });
+
+    it('should return error response on failure', async () => {
+      vi.mocked(mockClient.getBrokenBuildResponsibility!).mockRejectedValue(new Error('Plan not found'));
+
+      const result = await mockServer.invokeTool('bamboo_get_broken_build_responsibility', { plan_or_build_key: 'INVALID' });
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Error: Plan not found' }],
+        isError: true,
       });
     });
   });

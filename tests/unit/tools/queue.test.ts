@@ -156,6 +156,76 @@ describe('queue tools', () => {
       expect(parsed.queuedDeployments.queuedDeployment).toHaveLength(0);
     });
 
+    it('should handle error from client', async () => {
+      vi.mocked(mockClient.getBuildQueue!).mockRejectedValue(new Error('Bamboo API error (500)'));
+
+      const result = await mockServer.invokeTool('bamboo_get_build_queue', {});
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toBe('Error: Bamboo API error (500)');
+    });
+
+    it('should handle queue without queuedBuild array', async () => {
+      const mockQueue = {
+        queuedBuilds: { size: 0, 'start-index': 0, 'max-result': 25 },
+      };
+
+      vi.mocked(mockClient.getBuildQueue!).mockResolvedValue(mockQueue);
+
+      const result = await mockServer.invokeTool('bamboo_get_build_queue', {});
+
+      const parsed = parseResultJson<{ queuedBuilds: { size: number; queuedBuild?: unknown[] } }>(result);
+      expect(parsed.queuedBuilds.size).toBe(0);
+      expect(parsed.queuedBuilds.queuedBuild).toBeUndefined();
+    });
+  });
+
+  describe('bamboo_get_deployment_queue', () => {
+    it('should register the tool', () => {
+      const tool = mockServer.getTool('bamboo_get_deployment_queue');
+      expect(tool).toBeDefined();
+      expect(tool?.name).toBe('bamboo_get_deployment_queue');
+      expect(tool?.description).toBe('Get the current Bamboo deployment queue');
+    });
+
+    it('should get deployment queue when available', async () => {
+      const mockQueue = {
+        queuedDeployments: {
+          size: 2,
+          'start-index': 0,
+          'max-result': 25,
+          queuedDeployment: [
+            { deploymentResultId: 12345, deploymentVersionName: 'release-2.1.0-build-42', environmentId: 100, environmentName: 'Staging' },
+            { deploymentResultId: 12346, deploymentVersionName: 'release-2.0.5-build-38', environmentId: 200, environmentName: 'Production' },
+          ],
+        },
+      };
+
+      vi.mocked(mockClient.getDeploymentQueue!).mockResolvedValue(mockQueue);
+
+      const result = await mockServer.invokeTool('bamboo_get_deployment_queue', {});
+
+      expect(mockClient.getDeploymentQueue).toHaveBeenCalled();
+
+      const parsed = parseResultJson<typeof mockQueue>(result);
+      expect(parsed.queuedDeployments.size).toBe(2);
+      expect(parsed.queuedDeployments.queuedDeployment).toHaveLength(2);
+    });
+
+    it('should handle empty deployment queue', async () => {
+      const mockQueue = {
+        queuedDeployments: { size: 0, 'start-index': 0, 'max-result': 25, queuedDeployment: [] as unknown[] },
+      };
+
+      vi.mocked(mockClient.getDeploymentQueue!).mockResolvedValue(mockQueue);
+
+      const result = await mockServer.invokeTool('bamboo_get_deployment_queue', {});
+
+      const parsed = parseResultJson<typeof mockQueue>(result);
+      expect(parsed.queuedDeployments.size).toBe(0);
+      expect(parsed.queuedDeployments.queuedDeployment).toHaveLength(0);
+    });
+
     it('should handle queue not available', async () => {
       const mockResponse = {
         available: false,
