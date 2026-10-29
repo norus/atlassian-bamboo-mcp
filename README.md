@@ -47,8 +47,15 @@ No tab-switching, no manual navigation — just ask and get instant CI/CD insigh
 
 ### Prerequisites
 
-- Node.js 18+ (22.12+ for development)
+- Node.js 22.23.4+, 24.22.1+, or 26.12.1+ (see security note below)
 - Bamboo personal access token ([how to create](#creating-a-bamboo-token))
+
+> **Security note:** Node.js versions before 22.23.4, 24.22.1 and 26.12.1 are affected by
+> [CVE-2026-111497](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) ("Node2Shell"),
+> an out-of-bounds write in the Brotli decoder bundled with Node.js. This server decompresses
+> Brotli-encoded responses from the Bamboo server, so run it on a patched Node.js release.
+> Node.js 18 and 20 are end-of-life and will not receive the fix. If you use the Docker image,
+> rebuild it with `docker build --pull` to pick up the patched base image.
 
 ### From Source
 
