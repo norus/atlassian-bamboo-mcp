@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.2.0...v1.2.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **security:** require patched Node.js for CVE-2026-111497 and bump undici/MCP SDK ([110fdba](https://github.com/norus/atlassian-bamboo-mcp/commit/110fdba0bf326af695bc7e0d3ef36221eac3bd82)), closes [hi#severity](https://github.com/hi/issues/severity)
+
 # [1.2.0](https://github.com/norus/atlassian-bamboo-mcp/compare/v1.1.3...v1.2.0) (2026-02-06)
 
 
