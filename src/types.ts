@@ -244,4 +244,6 @@ export interface BambooClientConfig {
   baseUrl: string;
   token: string;
   proxyUrl?: string;
+  /** Extra headers sent on every request (e.g. Cloudflare Access service token). */
+  customHeaders?: Readonly<Record<string, string>>;
 }
