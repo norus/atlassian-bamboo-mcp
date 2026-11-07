@@ -81,6 +81,37 @@ The server requires these environment variables:
 | `BAMBOO_URL` | Yes | Base URL of your Bamboo server |
 | `BAMBOO_TOKEN` | Yes | Personal access token |
 | `BAMBOO_PROXY` | No | Proxy URL (e.g., `http://proxy:8080`) |
+| `BAMBOO_CF_ACCESS_CLIENT_ID` | No | Cloudflare Access service token Client ID (set together with the secret) |
+| `BAMBOO_CF_ACCESS_CLIENT_SECRET` | No | Cloudflare Access service token Client Secret |
+| `BAMBOO_HEADERS` | No | JSON object of extra headers sent on every request, e.g. `{"X-Gateway-Key":"abc"}` |
+
+### Cloudflare Access
+
+If your Bamboo site is protected by [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/identity/service-tokens/),
+create a service token, add a **Service Auth** policy for it on the application, and pass the token:
+
+```json
+{
+  "mcpServers": {
+    "bamboo": {
+      "command": "npx",
+      "args": ["-y", "bamboo-mcp-server@latest"],
+      "env": {
+        "BAMBOO_URL": "https://bamboo.example.com",
+        "BAMBOO_TOKEN": "your-token",
+        "BAMBOO_CF_ACCESS_CLIENT_ID": "xxxx.access",
+        "BAMBOO_CF_ACCESS_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+This sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` on every request. Use `BAMBOO_HEADERS` for any
+other headers. The `Authorization`, `Accept`, `Content-Type`, `Content-Length`, `Transfer-Encoding`, `Connection` and `Host`
+headers are managed by the server and cannot be set through `BAMBOO_HEADERS`. When custom headers are configured, redirects to a different origin
+(including `http` → `https`) are refused so the headers are never sent to another host; use the final `https`
+URL in `BAMBOO_URL`. Each Bamboo site needs its own server entry with its own variables.
 
 ### Creating a Bamboo Token
 
@@ -361,6 +392,15 @@ node dist/index.js
 - Verify your `BAMBOO_TOKEN` is correct
 - Ensure the token hasn't expired
 - Check token permissions in Bamboo
+
+</details>
+
+<details>
+<summary><b>403 Forbidden or Cloudflare Access login page</b></summary>
+
+- The site is protected by Cloudflare Access: set `BAMBOO_CF_ACCESS_CLIENT_ID` and `BAMBOO_CF_ACCESS_CLIENT_SECRET`
+- Ensure the Access application has a **Service Auth** policy that includes your service token
+- Check the service token hasn't expired
 
 </details>
 
